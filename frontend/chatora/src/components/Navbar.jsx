@@ -9,21 +9,22 @@ const Navbar = () => {
 
   const navigate = useNavigate();
 
-  // 👤 Safe user
+  // ✅ Safe user parse
   const user = (() => {
     try {
-      const data = localStorage.getItem("user");
-      return data ? JSON.parse(data) : null;
+      return JSON.parse(localStorage.getItem("user"));
     } catch {
       return null;
     }
   })();
 
-  // 🛒 Cart count
+  // 🛒 Cart count (FIXED → qty based)
   useEffect(() => {
     const updateCart = () => {
       const cart = JSON.parse(localStorage.getItem("cart")) || [];
-      setCartCount(cart.length);
+
+      const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+      setCartCount(totalQty);
     };
 
     updateCart();
@@ -60,6 +61,12 @@ const Navbar = () => {
     }
   };
 
+  // 🔐 Logout
+  const logout = () => {
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   return (
     <nav className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-lg sticky top-0 z-50 border-b dark:border-gray-700">
 
@@ -73,7 +80,7 @@ const Navbar = () => {
           🍔 Chatora
         </h1>
 
-        {/* 💻 Desktop Menu */}
+        {/* 💻 Desktop */}
         <div className="hidden md:flex items-center gap-6">
 
           {/* 🌙 Theme */}
@@ -81,7 +88,7 @@ const Navbar = () => {
             onClick={toggleTheme}
             className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700"
           >
-            {dark ? "☀️ Light" : "🌙 Dark"}
+            {dark ? "☀️" : "🌙"}
           </button>
 
           {/* 🛒 Cart */}
@@ -107,32 +114,45 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* 👑 ADMIN BUTTON (IMPORTANT) */}
-          {user?.role?.toLowerCase() === "admin" && (
+          {/* 🚚 DELIVERY PANEL */}
+          {user?.role === "delivery" && (
+            <button
+              onClick={() => navigate("/delivery/dashboard")}
+              className="text-blue-500 font-semibold"
+            >
+              🚚 Delivery
+            </button>
+          )}
+
+          {/* 👑 ADMIN PANEL */}
+          {user?.role === "admin" && (
             <button
               onClick={() => navigate("/admin")}
-              className="bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800 transition"
+              className="bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800"
             >
               👑 Admin
             </button>
+          )}
+
+          {/* 👤 USER NAME */}
+          {user && (
+            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+              Hi, {user.name}
+            </span>
           )}
 
           {/* 🔐 AUTH */}
           {!user ? (
             <Link
               to="/login"
-              className="bg-orange-500 text-white px-4 py-1 rounded-lg font-semibold hover:bg-orange-600 transition"
+              className="bg-orange-500 text-white px-4 py-1 rounded-lg hover:bg-orange-600"
             >
               Login
             </Link>
           ) : (
             <button
-              onClick={() => {
-                localStorage.removeItem("user");
-                localStorage.removeItem("token");
-                navigate("/login");
-              }}
-              className="bg-red-500 text-white px-4 py-1 rounded-lg hover:bg-red-600 transition"
+              onClick={logout}
+              className="bg-red-500 text-white px-4 py-1 rounded-lg hover:bg-red-600"
             >
               Logout
             </button>
@@ -165,17 +185,22 @@ const Navbar = () => {
               <Link to="/orders" onClick={() => setMenu(false)}>
                 Orders
               </Link>
-               {/* DELIVERY BOY ICON */}
-        {user?.role === "delivery" && (
-          <button
-            onClick={() => navigate("/delivery/dashboard")}
-            className="text-blue-500 font-semibold"
-          >
-            🚚 Delivery
-          </button>
-        )}
 
-              {user?.role?.toLowerCase() === "admin" && (
+              {/* 🚚 Delivery */}
+              {user?.role === "delivery" && (
+                <button
+                  onClick={() => {
+                    navigate("/delivery/dashboard");
+                    setMenu(false);
+                  }}
+                  className="text-blue-500 font-semibold"
+                >
+                  🚚 Delivery
+                </button>
+              )}
+
+              {/* 👑 Admin */}
+              {user?.role === "admin" && (
                 <button
                   onClick={() => {
                     navigate("/admin");
@@ -189,9 +214,7 @@ const Navbar = () => {
 
               <button
                 onClick={() => {
-                  localStorage.removeItem("user");
-                  localStorage.removeItem("token");
-                  navigate("/login");
+                  logout();
                   setMenu(false);
                 }}
                 className="bg-red-500 text-white px-4 py-1 rounded"

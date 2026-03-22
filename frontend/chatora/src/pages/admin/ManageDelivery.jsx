@@ -1,35 +1,44 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API = "http://localhost:5000/api";
+
 const ManageDelivery = () => {
   const [deliveryBoys, setDeliveryBoys] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
   });
 
-  const token = JSON.parse(localStorage.getItem("user"))?.token;
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
 
-  // 📦 FETCH DELIVERY BOYS (LIST)
+  // 📦 FETCH DELIVERY BOYS
   const fetchDeliveryBoys = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/user/delivery-boys",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      setLoading(true);
 
-      setDeliveryBoys(res.data);
+      const res = await axios.get(`${API}/user/delivery-boys`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setDeliveryBoys(res.data.data || []);
+
     } catch (err) {
-      console.log(err);
+      console.log("Fetch error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!token) {
+      alert("Unauthorized ❌");
+      return;
+    }
     fetchDeliveryBoys();
   }, []);
 
@@ -43,21 +52,18 @@ const ManageDelivery = () => {
     e.preventDefault();
 
     if (!form.name || !form.email || !form.password) {
-      alert("Fill all fields");
-      return;
+      return alert("Fill all fields ❌");
     }
 
     try {
       await axios.post(
-        "http://localhost:5000/api/user/add-delivery",
+        `${API}/user/add-delivery`,
         {
           ...form,
           role: "delivery",
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -69,10 +75,10 @@ const ManageDelivery = () => {
         password: "",
       });
 
-      fetchDeliveryBoys(); // refresh list
+      fetchDeliveryBoys();
 
     } catch (err) {
-      console.log(err);
+      console.log("Add error:", err.response?.data || err.message);
       alert("Error adding delivery boy ❌");
     }
   };
@@ -82,19 +88,34 @@ const ManageDelivery = () => {
     if (!window.confirm("Delete this delivery boy?")) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/user/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      await axios.delete(`${API}/user/delete/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       alert("Deleted ✅");
-
-      fetchDeliveryBoys(); // refresh list
+      fetchDeliveryBoys();
 
     } catch (err) {
-      console.log(err);
+      console.log("Delete error:", err.response?.data || err.message);
       alert("Error deleting ❌");
+    }
+  };
+
+  // 🔄 TOGGLE AVAILABILITY (🔥 IMPORTANT FEATURE)
+  const toggleAvailability = async (id, currentStatus) => {
+    try {
+      await axios.put(
+        `${API}/user/toggle-availability/${id}`,
+        { isAvailable: !currentStatus },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      fetchDeliveryBoys();
+
+    } catch (err) {
+      console.log("Toggle error:", err.response?.data || err.message);
     }
   };
 
@@ -135,38 +156,62 @@ const ManageDelivery = () => {
           className="p-2 border rounded text-black"
         />
 
-        <button className="bg-green-500 text-white py-2 rounded">
+        <button className="bg-green-500 text-white py-2 rounded hover:bg-green-600">
           ➕ Add Delivery Boy
         </button>
       </form>
 
-      {/* 📋 DELIVERY BOY LIST */}
-      <div className="grid gap-4">
+      {/* 📋 LIST */}
+      {loading ? (
+        <p>Loading...</p>
+      ) : deliveryBoys.length === 0 ? (
+        <p>No delivery boys found</p>
+      ) : (
+        <div className="grid gap-4">
 
-        {deliveryBoys.length === 0 && (
-          <p>No delivery boys found</p>
-        )}
-
-        {deliveryBoys.map((boy) => (
-          <div
-            key={boy._id}
-            className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
-          >
-            <div>
-              <p className="font-bold">{boy.name}</p>
-              <p>{boy.email}</p>
-            </div>
-
-            <button
-              onClick={() => deleteDeliveryBoy(boy._id)}
-              className="bg-red-500 text-white px-3 py-1 rounded"
+          {deliveryBoys.map((boy) => (
+            <div
+              key={boy._id}
+              className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
             >
-              ❌ Delete
-            </button>
-          </div>
-        ))}
+              <div>
+                <p className="font-bold">{boy.name}</p>
+                <p>{boy.email}</p>
 
-      </div>
+                {/* ✅ Availability Status */}
+                <p className={`text-sm ${
+                  boy.isAvailable ? "text-green-500" : "text-red-500"
+                }`}>
+                  {boy.isAvailable ? "Available" : "Busy"}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+
+                {/* 🔄 Toggle */}
+                <button
+                  onClick={() =>
+                    toggleAvailability(boy._id, boy.isAvailable)
+                  }
+                  className="bg-blue-500 text-white px-3 py-1 rounded"
+                >
+                  Toggle
+                </button>
+
+                {/* ❌ Delete */}
+                <button
+                  onClick={() => deleteDeliveryBoy(boy._id)}
+                  className="bg-red-500 text-white px-3 py-1 rounded"
+                >
+                  ❌
+                </button>
+
+              </div>
+            </div>
+          ))}
+
+        </div>
+      )}
 
     </div>
   );

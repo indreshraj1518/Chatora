@@ -1,16 +1,30 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API = "http://localhost:5000/api";
+
 const ManageCategory = () => {
   const [categories, setCategories] = useState([]);
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const token = JSON.parse(localStorage.getItem("user"))?.token;
+  // ✅ token fix (same as whole app)
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
 
   // 📦 Fetch categories
   const fetchCategories = async () => {
-    const res = await axios.get("http://localhost:5000/api/category/all");
-    setCategories(res.data);
+    try {
+      setLoading(true);
+
+      const res = await axios.get(`${API}/category/all`);
+      setCategories(res.data.data || []);
+
+    } catch (err) {
+      console.log("Category fetch error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -21,35 +35,57 @@ const ManageCategory = () => {
   const addCategory = async (e) => {
     e.preventDefault();
 
-    if (!name) return;
+    if (!name.trim()) {
+      return alert("Category name required ❌");
+    }
 
-    await axios.post(
-      "http://localhost:5000/api/category/add",
-      { name },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    if (!token) {
+      return alert("Unauthorized ❌ Please login again");
+    }
 
-    alert("Category added ✅");
-    setName("");
-    fetchCategories();
+    try {
+      await axios.post(
+        `${API}/category/create`, // ✅ fixed endpoint
+        { name },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      alert("Category added ✅");
+      setName("");
+      fetchCategories();
+
+    } catch (err) {
+      console.log("Add category error:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Error adding category ❌");
+    }
   };
 
   // ❌ Delete category
   const deleteCategory = async (id) => {
     if (!window.confirm("Delete this category?")) return;
 
-    await axios.delete(`http://localhost:5000/api/category/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    if (!token) {
+      return alert("Unauthorized ❌");
+    }
 
-    alert("Category deleted ✅");
-    fetchCategories();
+    try {
+      await axios.delete(`${API}/category/delete/${id}`, { // ✅ fixed endpoint
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      alert("Category deleted ✅");
+      fetchCategories();
+
+    } catch (err) {
+      console.log("Delete error:", err.response?.data || err.message);
+      alert("Error deleting category ❌");
+    }
   };
 
   return (
@@ -67,27 +103,33 @@ const ManageCategory = () => {
           className="p-2 border rounded w-64 text-black"
         />
 
-        <button className="bg-green-500 text-white px-4 py-2 rounded">
+        <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
           Add
         </button>
       </form>
 
-      {/* 📋 Category List */}
-      {categories.map((cat) => (
-        <div
-          key={cat._id}
-          className="bg-white dark:bg-gray-800 p-4 mb-3 rounded shadow flex justify-between"
-        >
-          <p className="font-semibold">{cat.name}</p>
-
-          <button
-            onClick={() => deleteCategory(cat._id)}
-            className="bg-red-500 text-white px-3 py-1 rounded"
+      {/* ⏳ Loading */}
+      {loading ? (
+        <p>Loading categories...</p>
+      ) : categories.length === 0 ? (
+        <p>No categories found</p>
+      ) : (
+        categories.map((cat) => (
+          <div
+            key={cat._id}
+            className="bg-white dark:bg-gray-800 p-4 mb-3 rounded shadow flex justify-between items-center"
           >
-            ❌ Delete
-          </button>
-        </div>
-      ))}
+            <p className="font-semibold">{cat.name}</p>
+
+            <button
+              onClick={() => deleteCategory(cat._id)}
+              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              ❌ Delete
+            </button>
+          </div>
+        ))
+      )}
 
     </div>
   );

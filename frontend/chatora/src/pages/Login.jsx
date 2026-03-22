@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const API = "http://localhost:5000/api";
+
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({
@@ -13,46 +15,41 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  // input change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.email || !form.password) {
-      alert("Please fill all fields");
-      return;
+      return alert("Please fill all fields");
     }
 
     setLoading(true);
 
     try {
       if (isLogin) {
-        // LOGIN API
-        const res = await axios.post("http://localhost:5000/api/user/login", {
+        // 🔐 LOGIN
+        const res = await axios.post(`${API}/user/login`, {
           email: form.email,
           password: form.password,
         });
 
-        console.log("LOGIN RESPONSE:", res.data); // DEBUG
+        // ✅ FIXED STORAGE
+        const userData = {
+          ...res.data.user,
+          token: res.data.token,
+        };
 
-        // // ✅ SAVE TOKEN
-         localStorage.setItem("token", res.data.token);
-
-        // // ✅ SAVE USER (VERY IMPORTANT)
-         localStorage.setItem("user", JSON.stringify(res.data.user));
-        // localStorage.setItem("user", JSON.stringify(res.data.user));
-        // localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(userData));
 
         alert("Login successful ✅");
 
         navigate("/");
       } else {
-        // SIGNUP API
-        await axios.post("http://localhost:5000/api/user/signup", form);
+        // 📝 SIGNUP
+        await axios.post(`${API}/user/signup`, form);
 
         alert("Signup successful ✅");
 
@@ -85,7 +82,7 @@ const Login = () => {
               onChange={handleChange}
               type="text"
               placeholder="Name"
-              className="p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600"
+              className="p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
             />
           )}
 
@@ -95,7 +92,7 @@ const Login = () => {
             onChange={handleChange}
             type="email"
             placeholder="Email"
-            className="p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600"
+            className="p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
           />
 
           <input
@@ -104,19 +101,19 @@ const Login = () => {
             onChange={handleChange}
             type="password"
             placeholder="Password"
-            className="p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white border-gray-300 dark:border-gray-600"
+            className="p-2 border rounded bg-white dark:bg-gray-700 text-black dark:text-white"
           />
 
           <button
             disabled={loading}
-            className="bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg transition disabled:opacity-50"
+            className="bg-orange-500 text-white py-2 rounded-lg disabled:opacity-50"
           >
             {loading ? "Processing..." : isLogin ? "Login" : "Signup"}
           </button>
 
         </form>
 
-        {/* Toggle */}
+        {/* 🔁 Toggle */}
         <p className="text-sm mt-3 text-center text-gray-700 dark:text-gray-300">
           {isLogin ? "Don't have an account?" : "Already have an account?"}
 

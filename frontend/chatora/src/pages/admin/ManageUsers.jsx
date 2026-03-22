@@ -1,53 +1,88 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API = "http://localhost:5000/api";
+
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
-  const token = JSON.parse(localStorage.getItem("user"))?.token;
+  const [loading, setLoading] = useState(false);
+
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  const token = currentUser?.token;
 
   // 📦 Fetch users
   const fetchUsers = async () => {
-    const res = await axios.get("http://localhost:5000/api/user/all", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      setLoading(true);
 
-    setUsers(res.data);
+      const res = await axios.get(`${API}/user/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUsers(res.data.data || []);
+
+    } catch (err) {
+      console.log("Fetch error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
+    if (!token) {
+      alert("Unauthorized ❌");
+      return;
+    }
+
     fetchUsers();
   }, []);
 
   // 🔄 Change Role
   const changeRole = async (id, role) => {
-    await axios.put(
-      `http://localhost:5000/api/user/${id}/role`,
-      { role },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    try {
+      await axios.put(
+        `${API}/user/update-role/${id}`, // ✅ fixed endpoint
+        { role },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    alert("Role updated ✅");
-    fetchUsers();
+      alert("Role updated ✅");
+      fetchUsers();
+
+    } catch (err) {
+      console.log("Role error:", err.response?.data || err.message);
+      alert("Error updating role ❌");
+    }
   };
 
   // ❌ Delete User
   const deleteUser = async (id) => {
+    if (currentUser?._id === id) {
+      return alert("You can't delete yourself ❌");
+    }
+
     if (!window.confirm("Delete this user?")) return;
 
-    await axios.delete(`http://localhost:5000/api/user/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      await axios.delete(`${API}/user/delete/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    alert("User deleted ✅");
-    fetchUsers();
+      alert("User deleted ✅");
+      fetchUsers();
+
+    } catch (err) {
+      console.log("Delete error:", err.response?.data || err.message);
+      alert("Error deleting ❌");
+    }
   };
 
   return (
@@ -55,41 +90,67 @@ const ManageUsers = () => {
 
       <h1 className="text-2xl font-bold mb-6">👥 Manage Users</h1>
 
-      {users.map((user) => (
-        <div
-          key={user._id}
-          className="bg-white dark:bg-gray-800 p-4 mb-4 rounded shadow flex justify-between items-center"
-        >
-          <div>
-            <p className="font-bold">{user.name}</p>
-            <p>{user.email}</p>
-            <p className="text-sm">Role: {user.role}</p>
-          </div>
+      {loading ? (
+        <p>Loading users...</p>
+      ) : users.length === 0 ? (
+        <p>No users found</p>
+      ) : (
+        <div className="grid gap-4">
 
-          <div className="flex gap-2">
-
-            {/* Change Role */}
-            <select
-              onChange={(e) => changeRole(user._id, e.target.value)}
-              className="p-2 border rounded text-black"
-              defaultValue={user.role}
+          {users.map((user) => (
+            <div
+              key={user._id}
+              className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
             >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-              <option value="delivery">Delivery</option>
-            </select>
+              <div>
+                <p className="font-bold">{user.name}</p>
+                <p>{user.email}</p>
 
-            {/* Delete */}
-            <button
-              onClick={() => deleteUser(user._id)}
-              className="bg-red-500 text-white px-3 py-1 rounded"
-            >
-              ❌ Delete
-            </button>
+                {/* ✅ Role */}
+                <p className="text-sm">
+                  Role:{" "}
+                  <span className="font-semibold text-orange-500">
+                    {user.role}
+                  </span>
+                </p>
 
-          </div>
+                {/* ✅ Delivery status */}
+                {user.role === "delivery" && (
+                  <p className={`text-sm ${
+                    user.isAvailable ? "text-green-500" : "text-red-500"
+                  }`}>
+                    {user.isAvailable ? "Available" : "Busy"}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+
+                {/* 🔄 Change Role */}
+                <select
+                  onChange={(e) => changeRole(user._id, e.target.value)}
+                  className="p-2 border rounded text-black"
+                  defaultValue={user.role}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="delivery">Delivery</option>
+                </select>
+
+                {/* ❌ Delete */}
+                <button
+                  onClick={() => deleteUser(user._id)}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  ❌
+                </button>
+
+              </div>
+            </div>
+          ))}
+
         </div>
-      ))}
+      )}
 
     </div>
   );

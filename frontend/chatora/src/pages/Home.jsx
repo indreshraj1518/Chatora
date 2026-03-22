@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+const API = "http://localhost:5000/api";
+
 const Home = () => {
   const [foods, setFoods] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -11,23 +13,23 @@ const Home = () => {
 
   const navigate = useNavigate();
 
-  // fetch foods
+  // ✅ Fetch Foods
   const getFoods = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/food/all");
-    setFoods(res.data.data);
+      const res = await axios.get(`${API}/food/all`);
+      setFoods(res.data.data || []);
     } catch (err) {
-      console.log(err);
+      console.log("Food fetch error:", err);
     }
   };
 
-  // fetch categories
+  // ✅ Fetch Categories
   const getCategories = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/category/all");
-     setCategories(res.data.data);
+      const res = await axios.get(`${API}/category/all`);
+      setCategories(res.data.data || []);
     } catch (err) {
-      console.log(err);
+      console.log("Category fetch error:", err);
     }
   };
 
@@ -37,11 +39,10 @@ const Home = () => {
       await Promise.all([getFoods(), getCategories()]);
       setLoading(false);
     };
-
     fetchData();
   }, []);
 
-  // filter
+  // ✅ Filter Logic (FIXED)
   const filteredFoods = foods.filter((item) => {
     return (
       (selectedCat ? item.category === selectedCat : true) &&
@@ -49,22 +50,25 @@ const Home = () => {
     );
   });
 
-  // 🛒 Add to cart
+  // ✅ Better Cart Logic (no duplicate items)
   const addToCart = (food) => {
-    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-    const item = {
-      foodId: food._id,
-      name: food.name,
-      price: food.price,
-      size: "medium",
-      qty: 1,
-      image: food.image,
-    };
+    const existing = cart.find((item) => item.foodId === food._id);
 
-    cart.push(item);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({
+        foodId: food._id,
+        name: food.name,
+        price: food.price,
+        qty: 1,
+        image: food.image,
+      });
+    }
+
     localStorage.setItem("cart", JSON.stringify(cart));
-
     alert("Added to cart 🛒");
   };
 
@@ -73,7 +77,6 @@ const Home = () => {
 
       {/* Sidebar */}
       <div className="hidden md:flex flex-col w-60 bg-white dark:bg-gray-800 p-4 shadow-md border-r dark:border-gray-700">
-
         <h2 className="text-xl font-bold mb-4">Categories</h2>
 
         <button
@@ -103,72 +106,70 @@ const Home = () => {
       {/* Main */}
       <div className="flex-1 p-4">
 
-        {/* Search */}
+        {/* 🔍 Search */}
         <input
           type="text"
           placeholder="Search food..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full p-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800 dark:border-gray-700"
+          className="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-orange-500 dark:bg-gray-800 dark:border-gray-700"
         />
 
-        {/* Loading */}
-        {loading && (
-          <p className="text-center">Loading foods...</p>
-        )}
+        {/* ⏳ Loading */}
+        {loading ? (
+          <p className="text-center text-lg">Loading foods...</p>
+        ) : (
+          <>
+            {/* 🍔 Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-
-          {filteredFoods.map((food) => (
-            <div
-              key={food._id}
-              onClick={() => navigate(`/food/${food._id}`)}
-              className="cursor-pointer bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-xl hover:-translate-y-1 transition border dark:border-gray-700"
-            >
-              <img
-                src={food.image}
-                alt={food.name}
-                className="w-full h-40 object-cover rounded-lg"
-              />
-
-              <h2 className="text-lg font-semibold mt-2">
-                {food.name}
-              </h2>
-
-              <p className="text-gray-500 dark:text-gray-300 text-sm">
-                {food.category}
-              </p>
-
-              <div className="flex justify-between items-center mt-2">
-
-                <span className="text-orange-500 font-bold">
-                  ₹{food.price}
-                </span>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    addToCart(food);
-                  }}
-                  className="bg-orange-500 text-white px-3 py-1 rounded-lg hover:bg-orange-600"
+              {filteredFoods.map((food) => (
+                <div
+                  key={food._id}
+                  onClick={() => navigate(`/food/${food._id}`)}
+                  className="cursor-pointer bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-xl hover:-translate-y-1 transition"
                 >
-                  Add
-                </button>
+                  <img
+                    src={food.image}
+                    alt={food.name}
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
 
-              </div>
+                  <h2 className="text-lg font-semibold mt-2">
+                    {food.name}
+                  </h2>
+
+                  <p className="text-sm text-gray-500">
+                    {food.category}
+                  </p>
+
+                  <div className="flex justify-between items-center mt-3">
+                    <span className="text-orange-500 font-bold">
+                      ₹{food.price}
+                    </span>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(food);
+                      }}
+                      className="bg-orange-500 text-white px-3 py-1 rounded-lg hover:bg-orange-600"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
 
-        </div>
-
-        {/* Empty */}
-        {filteredFoods.length === 0 && !loading && (
-          <p className="text-center text-gray-500 mt-10">
-            No food found 😢
-          </p>
+            {/* ❌ Empty */}
+            {filteredFoods.length === 0 && (
+              <p className="text-center mt-10 text-gray-500">
+                No food found 😢
+              </p>
+            )}
+          </>
         )}
-
       </div>
     </div>
   );

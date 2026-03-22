@@ -1,42 +1,48 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API = "http://localhost:5000/api";
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [deliveryBoys, setDeliveryBoys] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // ✅ सही token
-  const token = localStorage.getItem("token");
+  // ✅ FIXED token (same as other pages)
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user?.token;
 
   // 📦 Fetch Orders
   const fetchOrders = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/order/all", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      setLoading(true);
+
+      const res = await axios.get(`${API}/order/all`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ crash safe
-      setOrders(Array.isArray(res.data) ? res.data : []);
+      // ✅ backend safe
+      setOrders(res.data.data || []);
     } catch (err) {
       console.log("Order Fetch Error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   // 🚚 Fetch Delivery Boys
   const fetchDeliveryBoys = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/user/delivery-boys",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await axios.get(`${API}/user/delivery-boys`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // ✅ only available boys (backend field used)
+      const available = (res.data.data || []).filter(
+        (boy) => boy.isAvailable
       );
 
-      setDeliveryBoys(Array.isArray(res.data) ? res.data : []);
+      setDeliveryBoys(available);
     } catch (err) {
       console.log("Delivery Boy Error:", err.response?.data || err.message);
     }
@@ -54,14 +60,14 @@ const AdminOrders = () => {
 
   // 🚚 Assign Delivery Boy
   const assignDelivery = async (orderId, deliveryBoyId) => {
+    if (!deliveryBoyId) return;
+
     try {
       await axios.put(
-        `http://localhost:5000/api/order/assign/${orderId}`,
+        `${API}/order/assign/${orderId}`,
         { deliveryBoyId },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -76,12 +82,10 @@ const AdminOrders = () => {
   const updateStatus = async (orderId, status) => {
     try {
       await axios.put(
-        `http://localhost:5000/api/order/status/${orderId}`,
+        `${API}/order/status/${orderId}`,
         { status },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -97,7 +101,9 @@ const AdminOrders = () => {
 
       <h1 className="text-2xl font-bold mb-6">📦 Orders Management</h1>
 
-      {orders.length === 0 ? (
+      {loading ? (
+        <p>Loading orders...</p>
+      ) : orders.length === 0 ? (
         <p>No orders found</p>
       ) : (
         orders.map((order) => (
@@ -107,7 +113,25 @@ const AdminOrders = () => {
           >
             <p><b>Order ID:</b> {order._id}</p>
             <p><b>Total:</b> ₹{order.totalPrice}</p>
-            <p><b>Status:</b> {order.status}</p>
+
+            {/* ✅ Status badge */}
+            <p>
+              <b>Status:</b>{" "}
+              <span className="text-orange-500 font-semibold">
+                {order.status}
+              </span>
+            </p>
+
+            {/* 👤 User */}
+            <p>
+              <b>User:</b> {order.user?.name || "N/A"}
+            </p>
+
+            {/* 🚚 Assigned Boy */}
+            <p>
+              <b>Delivery Boy:</b>{" "}
+              {order.deliveryBoy?.name || "Not Assigned"}
+            </p>
 
             {/* 🍔 Items */}
             <div className="mt-2">
@@ -119,7 +143,7 @@ const AdminOrders = () => {
               ))}
             </div>
 
-            {/* 🚚 Assign Delivery Boy */}
+            {/* 🚚 Assign Delivery */}
             <div className="mt-3">
               <select
                 onChange={(e) =>
@@ -127,7 +151,7 @@ const AdminOrders = () => {
                 }
                 className="p-2 border rounded text-black"
               >
-                <option value="">Select Delivery Boy</option>
+                <option value="">Assign Delivery Boy</option>
 
                 {deliveryBoys.map((boy) => (
                   <option key={boy._id} value={boy._id}>
@@ -137,11 +161,19 @@ const AdminOrders = () => {
               </select>
             </div>
 
-            {/* 🔄 Status Update */}
+            {/* 🔄 Status Buttons */}
             <div className="mt-3 flex gap-2 flex-wrap">
+
+              <button
+                onClick={() => updateStatus(order._id, "preparing")}
+                className="bg-blue-500 text-white px-3 py-1 rounded"
+              >
+                Preparing
+              </button>
+
               <button
                 onClick={() => updateStatus(order._id, "assigned")}
-                className="bg-blue-500 text-white px-3 py-1 rounded"
+                className="bg-purple-500 text-white px-3 py-1 rounded"
               >
                 Assigned
               </button>
@@ -161,6 +193,7 @@ const AdminOrders = () => {
               >
                 Delivered
               </button>
+
             </div>
 
           </div>

@@ -5,7 +5,12 @@ const AdminRoute = ({ children }) => {
 
   if (!user) return <Navigate to="/login" />;
 
-  return user.role === "admin" ? children : <Navigate to="/" />;
+  // 🔥 FIX: case insensitive
+  if (user.role?.toLowerCase() !== "admin") {
+    return <Navigate to="/" />;
+  }
+
+  return children;
 };
 
 export default AdminRoute;

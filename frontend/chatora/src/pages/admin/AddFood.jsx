@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+const API = "http://localhost:5000/api";
+
 const AddFood = () => {
   const [form, setForm] = useState({
     name: "",
@@ -16,54 +18,71 @@ const AddFood = () => {
   });
 
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // fetch categories
+  // ✅ Fetch categories (FIXED)
   useEffect(() => {
     const fetchCategories = async () => {
-      const res = await axios.get("http://localhost:5000/api/category/all");
-      setCategories(res.data);
+      try {
+        const res = await axios.get(`${API}/category/all`);
+        setCategories(res.data.data || []);
+      } catch (err) {
+        console.log("Category fetch error:", err);
+      }
     };
 
     fetchCategories();
   }, []);
 
+  // ✅ Handle input
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // ✅ Clean number helper (IMPORTANT FIX)
+  const num = (val) => (val ? Number(val) : 0);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const token = JSON.parse(localStorage.getItem("user"))?.token;
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = user?.token;
+
+    if (!token) {
+      return alert("Unauthorized ❌ Please login again");
+    }
+
+    setLoading(true);
 
     const data = {
       name: form.name,
       description: form.description,
       category: form.category,
-      price: Number(form.price),
+      price: num(form.price),
+
+      // ✅ backend-friendly sizes
       sizes: {
-        small: Number(form.small),
-        medium: Number(form.medium),
-        large: Number(form.large),
+        small: num(form.small),
+        medium: num(form.medium),
+        large: num(form.large),
       },
-      discount: Number(form.discount),
-      deliveryCharge: Number(form.deliveryCharge),
+
+      discount: num(form.discount),
+      deliveryCharge: num(form.deliveryCharge),
       image: form.image,
     };
 
     try {
-      await axios.post(
-        "http://localhost:5000/api/food/add",
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // ✅ endpoint consistency
+      await axios.post(`${API}/food/create`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       alert("Food added successfully ✅");
 
+      // reset form
       setForm({
         name: "",
         description: "",
@@ -79,7 +98,9 @@ const AddFood = () => {
 
     } catch (err) {
       console.log(err);
-      alert("Error adding food ❌");
+      alert(err.response?.data?.message || "Error adding food ❌");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,7 +133,7 @@ const AddFood = () => {
           className="p-2 border rounded"
         />
 
-        {/* Category */}
+        {/* ✅ Category */}
         <select
           name="category"
           value={form.category}
@@ -130,7 +151,7 @@ const AddFood = () => {
 
         <input
           name="price"
-          placeholder="Price"
+          placeholder="Base Price"
           type="number"
           value={form.price}
           onChange={handleChange}
@@ -138,33 +159,35 @@ const AddFood = () => {
           required
         />
 
-        {/* Sizes */}
-        <input
-          name="small"
-          placeholder="Small Price"
-          type="number"
-          value={form.small}
-          onChange={handleChange}
-          className="p-2 border rounded"
-        />
+        {/* ✅ Sizes */}
+        <div className="grid grid-cols-3 gap-2">
+          <input
+            name="small"
+            placeholder="Small"
+            type="number"
+            value={form.small}
+            onChange={handleChange}
+            className="p-2 border rounded"
+          />
 
-        <input
-          name="medium"
-          placeholder="Medium Price"
-          type="number"
-          value={form.medium}
-          onChange={handleChange}
-          className="p-2 border rounded"
-        />
+          <input
+            name="medium"
+            placeholder="Medium"
+            type="number"
+            value={form.medium}
+            onChange={handleChange}
+            className="p-2 border rounded"
+          />
 
-        <input
-          name="large"
-          placeholder="Large Price"
-          type="number"
-          value={form.large}
-          onChange={handleChange}
-          className="p-2 border rounded"
-        />
+          <input
+            name="large"
+            placeholder="Large"
+            type="number"
+            value={form.large}
+            onChange={handleChange}
+            className="p-2 border rounded"
+          />
+        </div>
 
         <input
           name="discount"
@@ -195,9 +218,10 @@ const AddFood = () => {
 
         <button
           type="submit"
-          className="bg-orange-500 text-white py-2 rounded"
+          disabled={loading}
+          className="bg-orange-500 text-white py-2 rounded hover:bg-orange-600"
         >
-          Add Food
+          {loading ? "Adding..." : "Add Food"}
         </button>
 
       </form>
