@@ -26,6 +26,10 @@ import ManageDelivery from "./pages/admin/ManageDelivery";
 
 // ✅ DELIVERY
 import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
+import Profile from "./pages/Profile";
+import OtpLogin from "./pages/OtpLogin";
+
+
 
 function App() {
 
@@ -144,7 +148,17 @@ function App() {
               <DeliveryDashboard />
             </DeliveryRoute>
           }
+          //user profile route
         />
+        <Route
+  path="/profile"
+  element={
+    <PrivateRoute>
+      <Profile />
+    </PrivateRoute>
+  }
+/>
+<Route path="/otp-login" element={<OtpLogin />} />
 
         {/* ❌ 404 FALLBACK */}
         <Route

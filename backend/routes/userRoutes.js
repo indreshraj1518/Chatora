@@ -1,5 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const upload = require("../middleware/upload");
+
+
 
 const {
   signup,
@@ -22,5 +25,10 @@ router.delete("/:id", auth, admin, deleteUser);
 
 // 🚚 DELIVERY BOYS
 router.get("/delivery-boys", auth, admin, getDeliveryBoys);
+
+// uplod profile pic
+router.put("/upload-profile", auth, upload.single("image"), (req, res) => {
+  res.json({ image: req.file.filename });
+});
 
 module.exports = router;

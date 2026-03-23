@@ -45,7 +45,7 @@ const AdminDashboard = () => {
 
         {/* 🚚 Delivery Control (UPDATED) */}
         <Link
-          to="/admin/delivery"
+          to="/admin/delivery-boys"
           className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow hover:shadow-lg transition"
         >
           <h2 className="text-xl font-semibold">🚚 Delivery Control</h2>
@@ -81,7 +81,7 @@ const AdminDashboard = () => {
 
         {/* 📂 Categories (ROUTE FIXED) */}
         <Link
-          to="/admin/category"
+          to="/admin/categories"
           className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow hover:shadow-lg transition"
         >
           <h2 className="text-xl font-semibold">📂 Categories</h2>

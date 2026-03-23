@@ -45,7 +45,7 @@ const ManageCategory = () => {
 
     try {
       await axios.post(
-        `${API}/category/create`, // ✅ fixed endpoint
+        `${API}/category/add`, // ✅ fixed endpoint
         { name },
         {
           headers: {
@@ -73,7 +73,7 @@ const ManageCategory = () => {
     }
 
     try {
-      await axios.delete(`${API}/category/delete/${id}`, { // ✅ fixed endpoint
+      await axios.delete(`${API}/category/${id}`, { // ✅ fixed endpoint
         headers: {
           Authorization: `Bearer ${token}`,
         },

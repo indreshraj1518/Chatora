@@ -74,7 +74,7 @@ const AddFood = () => {
 
     try {
       // ✅ endpoint consistency
-      await axios.post(`${API}/food/create`, data, {
+      await axios.post(`${API}/food/add`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

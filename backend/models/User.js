@@ -21,9 +21,6 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    phone: {
-      type: String,
-    },
 
     isVerified: {
       type: Boolean,
@@ -46,6 +43,12 @@ const userSchema = new mongoose.Schema(
       lat: Number,
       lng: Number,
     },
+   phone: {
+  type: String,
+  required: false, // ❗ change here
+  unique: true,
+  sparse: true, // ⚠️ important (null allowed multiple times)
+},
   },
   { timestamps: true }
 );
